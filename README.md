@@ -1,5 +1,5 @@
 # transBot
 
-# translate texts between english and persian
+# Translate texts between english and persian
 
-# just put your token on it and run...
+# Just put your TOKEN on it and run...

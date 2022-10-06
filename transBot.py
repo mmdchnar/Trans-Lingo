@@ -1,9 +1,10 @@
 import logging
 import sqlite3
 from uuid import uuid4
+from deep_translator import GoogleTranslator
 from telegram import Update, ForceReply, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, InlineQueryHandler
-from deep_translator import GoogleTranslator
+
 
 # connect to database
 con = sqlite3.connect("users.db", check_same_thread=False)
