@@ -1,0 +1,2 @@
+deep_translator
+python-telegram-bot
