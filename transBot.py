@@ -3,8 +3,10 @@ import sqlite3
 from uuid import uuid4
 from deep_translator import GoogleTranslator
 from telegram import Update, ForceReply, InlineQueryResultArticle, InputTextMessageContent
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, InlineQueryHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, InlineQueryHandler
 
+
+TOKEN = 'TOKEN'
 
 # connect to database
 con = sqlite3.connect("users.db", check_same_thread=False)
@@ -15,23 +17,23 @@ cur.execute('create table if not exists users (userid integer, source text, targ
 
 
 # Define change language option
-def fa(update: Update, context: CallbackContext) -> None:
+async def fa(update: Update, context: CallbackContext) -> None:
     try:
         cur.execute(f'update users set target = "fa" where userid = {update.effective_user.id}')
     except sqlite3.OperationalError:
         cur.execute(f'insert into users values ({update.effective_user.id}, "auto", "fa")')
     con.commit()
-    update.message.reply_text('✅ Your message will translate to فارسی🇮🇷',
+    await update.message.reply_text('✅ Your message will translate to فارسی🇮🇷',
                               reply_markup=ForceReply(input_field_placeholder='✅ Translate to "فارسی"'))
 
 
-def en(update: Update, context: CallbackContext) -> None:
+async def en(update: Update, context: CallbackContext) -> None:
     try:
         cur.execute(f'update users set target = "en" where userid = {update.effective_user.id}')
     except sqlite3.OperationalError:
         cur.execute(f'insert into users values ({update.effective_user.id}, "auto", "en")')
     con.commit()
-    update.message.reply_text('✅ Your message will translate to English🇬🇧',
+    await update.message.reply_text('✅ Your message will translate to English🇬🇧',
                               reply_markup=ForceReply(input_field_placeholder='✅ Translate to "English"'))
 
 
@@ -42,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
-def start(update: Update, context: CallbackContext) -> None:
+async def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
     data = cur.execute(
@@ -66,7 +68,7 @@ For change use:
                                 input_field_placeholder=f'✅ Translate to "{"English" if data[2] == "en" else "فارسی"} "...'))
 
 
-def translate(update: Update, context: CallbackContext) -> None:
+async def translate(update: Update, context: CallbackContext) -> None:
     """Translate the user message."""
     data = cur.execute(
         "SELECT * FROM users WHERE userid = ?",
@@ -76,10 +78,10 @@ def translate(update: Update, context: CallbackContext) -> None:
         con.commit()
         data = (update.effective_user.id, 'auto', 'fa')
     translation = GoogleTranslator(source='auto', target=data[2]).translate(update.message.text)
-    update.message.reply_text(translation if translation is not None else update.message.text)
+    await update.message.reply_text(translation if translation is not None else update.message.text)
 
 
-def inline(update: Update, context: CallbackContext) -> None:
+async def inline(update: Update, context: CallbackContext) -> None:
     """Handle the inline query."""
     query = update.inline_query.query
 
@@ -107,25 +109,23 @@ def inline(update: Update, context: CallbackContext) -> None:
 def main() -> None:
     """Start the bot."""
     # Create the Updater
-    updater = Updater("TOKEN")
-
-    dispatcher = updater.dispatcher
+    
+    application = Application.builder().token(TOKEN).build()
 
     # on different commands - answer in Telegram
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("fa", fa))
-    dispatcher.add_handler(CommandHandler("en", en))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("en", en))
+    application.add_handler(CommandHandler("fa", fa))
 
     # on non command i.e message - translate the message on Telegram
-    dispatcher.add_handler(MessageHandler(Filters.all & ~Filters.command, translate))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, translate))
+
 
     # on inline translation
-    dispatcher.add_handler(InlineQueryHandler(inline))
+    application.add_handler(InlineQueryHandler(inline))
 
     # Start the Bot
-    updater.start_polling()
-
-    updater.idle()
+    application.run_polling()
 
 
 if __name__ == '__main__':
