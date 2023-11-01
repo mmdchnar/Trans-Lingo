@@ -1,4 +1,4 @@
-# transBot
+# Trans Lingo
 
 # Translate texts between english and persian
 
